@@ -1,0 +1,10 @@
+.git
+.gradle
+build
+out
+*.iml
+.idea
+logs
+node_modules
+*.log
+docker-compose.override.yml
