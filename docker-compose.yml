@@ -14,6 +14,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: wallet
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -29,7 +30,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wallet"]
+      test: [ "CMD-SHELL", "pg_isready -U wallet" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,6 +38,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server --requirepass wallet
     ports:
       - "6379:6379"
     restart: unless-stopped
