@@ -49,4 +49,15 @@ public class Wallet {
     void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void decreaseBalance(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be positive");
+        }
+        BigDecimal next = this.balance.subtract(amount);
+        if (next.signum() < 0) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+        this.balance = next;
+    }
 }
