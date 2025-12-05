@@ -10,6 +10,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.RedisConnectionException;
 import org.redisson.client.RedisTimeoutException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -22,12 +23,18 @@ public class WalletLockFacade {
     private final RedissonClient redissonClient;
     private final WalletService walletService;
 
+    @Value("${wallet.lock.wait-time:2}")
+    private long waitTime;
+
+    @Value("${wallet.lock.lease-time:3}")
+    private long leaseTime;
+
     public WithdrawalResponse withdraw(Long walletId, WithdrawalRequest req) {
         String lockKey = "wallet:lock:" + walletId;
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            boolean available = lock.tryLock(2, 3, TimeUnit.SECONDS);
+            boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
             if (!available) {
                 throw new LockAcquisitionException("잠시 후 다시 시도해주세요.");
