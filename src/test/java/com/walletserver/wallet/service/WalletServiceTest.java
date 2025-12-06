@@ -5,7 +5,6 @@ import com.walletserver.transaction.dto.WithdrawalResponse;
 import com.walletserver.transaction.entity.TransactionHistory;
 import com.walletserver.transaction.repository.TransactionHistoryRepository;
 import com.walletserver.wallet.entity.Wallet;
-import com.walletserver.wallet.exception.DuplicateTransactionException;
 import com.walletserver.wallet.repository.WalletRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +50,7 @@ class WalletServiceTest {
                 .balance(initialBalance)
                 .build();
 
-        given(historyRepository.existsByTransactionId(transactionId)).willReturn(false);
+        given(historyRepository.findByTransactionId(transactionId)).willReturn(Optional.empty());
         given(walletRepository.findById(walletId)).willReturn(Optional.of(wallet));
 
         // when
@@ -64,19 +63,29 @@ class WalletServiceTest {
     }
 
     @Test
-    @DisplayName("중복 트랜잭션 예외 테스트")
-    void withdraw_duplicate_transaction() {
+    @DisplayName("중복 트랜잭션 시 기존 성공 응답 반환 테스트")
+    void withdraw_duplicate_transaction_returns_existing() {
         // given
         Long walletId = 1L;
         UUID transactionId = UUID.randomUUID();
         WithdrawalRequest request = new WithdrawalRequest(transactionId, BigDecimal.valueOf(1000));
+        TransactionHistory existingHistory = TransactionHistory.builder()
+                .transactionId(transactionId)
+                .walletId(walletId)
+                .amount(BigDecimal.valueOf(1000))
+                .balanceSnapshot(BigDecimal.valueOf(4000))
+                .status(TransactionHistory.TransactionStatus.SUCCESS)
+                .build();
 
-        given(historyRepository.existsByTransactionId(transactionId)).willReturn(true);
+        given(historyRepository.findByTransactionId(transactionId)).willReturn(Optional.of(existingHistory));
 
-        // when & then
-        assertThatThrownBy(() -> walletService.withdraw(walletId, request, false))
-                .isInstanceOf(DuplicateTransactionException.class)
-                .hasMessage("이미 처리된 트랜잭션입니다.");
+        // when
+        WithdrawalResponse response = walletService.withdraw(walletId, request, false);
+
+        // then
+        assertThat(response.transactionId()).isEqualTo(transactionId);
+        assertThat(response.amount()).isEqualTo(BigDecimal.valueOf(1000));
+        assertThat(response.remainingBalance()).isEqualTo(BigDecimal.valueOf(4000));
     }
 
     @Test
@@ -94,7 +103,7 @@ class WalletServiceTest {
                 .balance(initialBalance)
                 .build();
 
-        given(historyRepository.existsByTransactionId(transactionId)).willReturn(false);
+        given(historyRepository.findByTransactionId(transactionId)).willReturn(Optional.empty());
         given(walletRepository.findById(walletId)).willReturn(Optional.of(wallet));
 
         // when & then

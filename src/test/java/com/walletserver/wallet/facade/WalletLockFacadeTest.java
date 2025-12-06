@@ -47,7 +47,6 @@ class WalletLockFacadeTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(walletLockFacade, "waitTime", 2L);
-        ReflectionTestUtils.setField(walletLockFacade, "leaseTime", 3L);
     }
 
     @Test
@@ -59,8 +58,8 @@ class WalletLockFacadeTest {
         WithdrawalResponse expectedResponse = new WithdrawalResponse(request.transactionId(), request.amount(),
                 BigDecimal.ZERO, "SUCCESS");
 
-        given(redissonClient.getLock(anyString())).willReturn(lock);
-        given(lock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).willReturn(true);
+        given(redissonClient.getFairLock(anyString())).willReturn(lock);
+        given(lock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(true);
         given(walletService.withdraw(walletId, request, false)).willReturn(expectedResponse);
 
         // when
@@ -78,8 +77,8 @@ class WalletLockFacadeTest {
         Long walletId = 1L;
         WithdrawalRequest request = new WithdrawalRequest(UUID.randomUUID(), BigDecimal.valueOf(1000));
 
-        given(redissonClient.getLock(anyString())).willReturn(lock);
-        given(lock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).willReturn(false);
+        given(redissonClient.getFairLock(anyString())).willReturn(lock);
+        given(lock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> walletLockFacade.withdraw(walletId, request))
@@ -96,9 +95,8 @@ class WalletLockFacadeTest {
         WithdrawalResponse expectedResponse = new WithdrawalResponse(request.transactionId(), request.amount(),
                 BigDecimal.ZERO, "SUCCESS");
 
-        given(redissonClient.getLock(anyString())).willReturn(lock);
-        doThrow(new RedisConnectionException("Redis Down")).when(lock).tryLock(anyLong(), anyLong(),
-                any(TimeUnit.class));
+        given(redissonClient.getFairLock(anyString())).willReturn(lock);
+        doThrow(new RedisConnectionException("Redis Down")).when(lock).tryLock(anyLong(), any(TimeUnit.class));
         given(walletService.withdraw(walletId, request, true)).willReturn(expectedResponse);
 
         // when
