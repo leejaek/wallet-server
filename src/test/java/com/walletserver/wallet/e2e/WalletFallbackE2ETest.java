@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.mock;
 
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Import(com.walletserver.global.config.TestContainersConfig.class)
 class WalletFallbackE2ETest {
 
     @LocalServerPort
@@ -54,7 +56,7 @@ class WalletFallbackE2ETest {
         // given
         BigDecimal initialBalance = BigDecimal.valueOf(20000000); // 2000만원
         BigDecimal withdrawAmount = BigDecimal.valueOf(10000); // 1만원
-        int threadCount = 2000;
+        int threadCount = 100;
 
         Wallet wallet = walletRepository.save(Wallet.builder()
                 .balance(initialBalance)

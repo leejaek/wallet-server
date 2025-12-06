@@ -1,13 +1,17 @@
 package com.walletserver.wallet.service;
 
 import com.walletserver.transaction.dto.WithdrawalRequest;
+import com.walletserver.global.config.TestContainersConfig;
+import com.walletserver.transaction.repository.TransactionHistoryRepository;
 import com.walletserver.wallet.entity.Wallet;
 import com.walletserver.wallet.repository.WalletRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -20,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
 @SpringBootTest
-public class WalletNoLockTest {
+@Import(TestContainersConfig.class)
+class WalletNoLockTest {
 
     @Autowired
     private WalletService walletService;
@@ -28,17 +33,28 @@ public class WalletNoLockTest {
     @Autowired
     private WalletRepository walletRepository;
 
-    @Test
-    @DisplayName("Concurrency Control 미적용 시: Race Condition 발생 확인 테스트")
-    void withdraw_without_lock_concurrency_test() throws InterruptedException {
-        // given
-        BigDecimal initialBalance = BigDecimal.valueOf(1000000); // 100만원
-        BigDecimal withdrawAmount = BigDecimal.valueOf(10000); // 1만원
-        int threadCount = 100;
+    @Autowired
+    private TransactionHistoryRepository historyRepository;
 
-        Wallet wallet = walletRepository.save(Wallet.builder()
-                .balance(initialBalance)
-                .build());
+    private Long walletId;
+
+    @BeforeEach
+    void setUp() {
+        historyRepository.deleteAll();
+        walletRepository.deleteAll();
+
+        Wallet wallet = Wallet.builder()
+                .balance(BigDecimal.valueOf(1000000))
+                .build();
+        walletId = walletRepository.save(wallet).getId();
+    }
+
+    @Test
+    @DisplayName("락 없이 동시 요청: 경쟁 상태 발생 확인 (100 threads)")
+    void execution_without_lock_race_condition() throws InterruptedException {
+        // given
+        int threadCount = 100;
+        BigDecimal amount = BigDecimal.valueOf(10000); // 10,000 * 100 = 1,000,000
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -51,9 +67,9 @@ public class WalletNoLockTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    WithdrawalRequest request = new WithdrawalRequest(UUID.randomUUID(), withdrawAmount);
+                    WithdrawalRequest request = new WithdrawalRequest(UUID.randomUUID(), amount);
                     // useDbLock = false (DB Lock 사용 안 함, 일반 조회)
-                    walletService.withdraw(wallet.getId(), request, false);
+                    walletService.withdraw(walletId, request, false);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();
@@ -67,7 +83,7 @@ public class WalletNoLockTest {
         latch.await();
 
         // then
-        Wallet updatedWallet = walletRepository.findById(wallet.getId()).orElseThrow();
+        Wallet updatedWallet = walletRepository.findById(walletId).orElseThrow();
         log.info("=== No-Lock Test Result ===");
         log.info("Expected Balance: 0");
         log.info("Actual Balance: {}", updatedWallet.getBalance());

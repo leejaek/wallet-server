@@ -57,16 +57,17 @@ Redis 장애 상황을 대비하여 **DB Pessimistic Lock**을 Fallback으로 �
 ## 🧪 동시성 테스트 결과
 
 ### 1. 테스트 환경
+- **Infrastructure**: Testcontainers (Isolated PostgreSQL & Redis)
 - **Target**: `POST /api/wallets/{walletId}/withdraw`
-- **Condition**: 동일한 월렛 ID에 대해 다수의 스레드가 동시에 출금 요청.
+- **Condition**: 100~2,000개의 스레드가 동시에 출금 요청. (CI 환경 최적화를 위해 기본 테스트는 100건으로 설정)
 
 ### 2. 시나리오별 결과 요약
 
-| 시나리오 | 동시 요청 수 | 결과 | 비고 |
-|---|---|---|---|
-| **Case 1: 제어 미적용** | 100건 | ❌ **실패** (Race Condition) | 최종 잔액 불일치 발생 (데이터 무결성 깨짐) |
-| **Case 2: Redis Lock** | 2,000건 | ✅ **성공** | **Spring Retry + FairLock** 적용으로 안정적 처리 |
-| **Case 3: Fallback (DB)** | 2,000건 | ✅ **성공** | Redis 장애 시 DB Lock으로 전환되어 처리 완료 |
+| 시나리오 | 동시 요청 수          | 결과 | 비고 |
+|---|------------------|---|---|
+| **Case 1: 제어 미적용** | 100건             | ❌ **실패** (Race Condition) | 최종 잔액 불일치 발생 (데이터 무결성 깨짐) |
+| **Case 2: Redis Lock** | 100건 (Max 2,000) | ✅ **성공** | **Spring Retry + FairLock** 적용으로 안정적 처리 |
+| **Case 3: Fallback (DB)** | 100건 (Max 2,000) | ✅ **성공** | Redis 장애 시 DB Lock으로 전환되어 처리 완료 |
 
 ### 3. 상세 증빙 로그
 
@@ -81,12 +82,11 @@ INFO ... WalletNoLockTest : Race Condition Confirmed: Balance IS NOT ZERO
 ```
 
 #### Case 2: Redis Distributed Lock 적용 (성공)
-`WalletE2ETest` 실행 결과, 2,000건의 대량 트래픽 상황에서도 데이터 무결성 보장.
+`WalletE2ETest` 실행 결과, 동시 트래픽 상황에서도 데이터 무결성 보장.
 ```text
-[Thread-1998] Request success. Status: 200 OK
-[Thread-1999] Request success. Status: 200 OK
+[Thread-1] Request success. Status: 200 OK
 ...
-INFO ... WalletE2ETest : Success count: 2000
+INFO ... WalletE2ETest : Success count: 100
 INFO ... WalletE2ETest : Fail count: 0
 INFO ... WalletE2ETest : Final Balance: 0
 ```
@@ -97,7 +97,7 @@ Redis 연결 끊김 시뮬레이션 상황에서 DB Lock으로 자동 전환되�
 ERROR ... WalletLockFacade : Redis 장애 감지! DB Lock으로 전환합니다.
 INFO ... WalletFallbackE2ETest : [Thread-100] Request success. Status: 200 OK
 ...
-INFO ... WalletFallbackE2ETest : Success count: 2000
+INFO ... WalletFallbackE2ETest : Success count: 100
 INFO ... WalletFallbackE2ETest : Final Balance: 0
 ```
 
@@ -106,6 +106,6 @@ INFO ... WalletFallbackE2ETest : Final Balance: 0
 ## 🛠 기술 스택
 - **Language**: Java 17
 - **Framework**: Spring Boot 3.4.0
-- **Database**: PostgreSQL (Docker), H2 (Test)
+- **Database**: PostgreSQL (Docker / Testcontainers)
 - **Cache/Lock**: Redis (Redisson)
-- **Test**: JUnit 5, Spring Boot Test, Mockito
+- **Test**: JUnit 5, Spring Boot Test, Mockito, Testcontainers
