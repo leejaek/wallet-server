@@ -28,8 +28,10 @@ public class WalletService {
         }
 
         Wallet wallet = useDbLock
-                ? walletRepository.findByIdForUpdate(walletId).orElseThrow()
-                : walletRepository.findById(walletId).orElseThrow();
+                ? walletRepository.findByIdForUpdate(walletId)
+                        .orElseThrow(() -> new com.walletserver.wallet.exception.WalletNotFoundException(walletId))
+                : walletRepository.findById(walletId)
+                        .orElseThrow(() -> new com.walletserver.wallet.exception.WalletNotFoundException(walletId));
 
         wallet.decreaseBalance(req.amount());
 

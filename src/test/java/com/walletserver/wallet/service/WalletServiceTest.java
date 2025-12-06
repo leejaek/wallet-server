@@ -111,4 +111,21 @@ class WalletServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Insufficient balance");
     }
+
+    @Test
+    @DisplayName("존재하지 않는 월렛 ID 예외 테스트")
+    void withdraw_wallet_not_found() {
+        // given
+        Long walletId = 999L;
+        UUID transactionId = UUID.randomUUID();
+        WithdrawalRequest request = new WithdrawalRequest(transactionId, BigDecimal.valueOf(1000));
+
+        given(historyRepository.findByTransactionId(transactionId)).willReturn(Optional.empty());
+        given(walletRepository.findById(walletId)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> walletService.withdraw(walletId, request, false))
+                .isInstanceOf(com.walletserver.wallet.exception.WalletNotFoundException.class)
+                .hasMessage("Wallet not found with ID: " + walletId);
+    }
 }

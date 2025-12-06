@@ -44,6 +44,15 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("LOCK_ACQUISITION_FAILED", e.getMessage()));
     }
 
+    @ExceptionHandler(com.walletserver.wallet.exception.WalletNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWalletNotFoundException(
+            com.walletserver.wallet.exception.WalletNotFoundException e) {
+        log.warn("Wallet Not Found: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("WALLET_NOT_FOUND", e.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("Illegal Argument: {}", e.getMessage());
