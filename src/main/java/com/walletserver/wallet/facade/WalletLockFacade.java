@@ -26,6 +26,7 @@ public class WalletLockFacade {
     @Value("${wallet.lock.wait-time:3}")
     private long waitTime;
 
+    @org.springframework.retry.annotation.Retryable(value = LockAcquisitionException.class, maxAttempts = 3, backoff = @org.springframework.retry.annotation.Backoff(delay = 1000))
     public WithdrawalResponse withdraw(Long walletId, WithdrawalRequest req) {
         String lockKey = "wallet:lock:" + walletId;
         RLock lock = redissonClient.getFairLock(lockKey);
