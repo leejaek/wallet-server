@@ -7,7 +7,6 @@ import com.walletserver.transaction.entity.TransactionHistory.TransactionStatus;
 import com.walletserver.transaction.entity.TransactionHistory.TransactionType;
 import com.walletserver.transaction.repository.TransactionHistoryRepository;
 import com.walletserver.wallet.entity.Wallet;
-import com.walletserver.wallet.exception.DuplicateTransactionException;
 import com.walletserver.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,8 +21,10 @@ public class WalletService {
 
     @Transactional
     public WithdrawalResponse withdraw(Long walletId, WithdrawalRequest req, boolean useDbLock) {
-        if (historyRepository.existsByTransactionId(req.transactionId())) {
-            throw new DuplicateTransactionException("이미 처리된 트랜잭션입니다.");
+        // Idempotency check
+        var existingHistory = historyRepository.findByTransactionId(req.transactionId());
+        if (existingHistory.isPresent()) {
+            return WithdrawalResponse.from(existingHistory.get());
         }
 
         Wallet wallet = useDbLock

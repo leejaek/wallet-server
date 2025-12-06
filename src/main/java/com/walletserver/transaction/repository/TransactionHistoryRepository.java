@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface TransactionHistoryRepository extends JpaRepository<TransactionHistory, Long> {
 
     boolean existsByTransactionId(UUID transactionId);
+
+    java.util.Optional<TransactionHistory> findByTransactionId(UUID transactionId);
 }
