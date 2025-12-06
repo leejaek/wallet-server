@@ -62,8 +62,8 @@ class WalletFallbackE2ETest {
 
         // Mock RedissonClient to throw RedisConnectionException
         RLock mockLock = mock(RLock.class);
-        given(redissonClient.getLock(anyString())).willReturn(mockLock);
-        given(mockLock.tryLock(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(),
+        given(redissonClient.getFairLock(anyString())).willReturn(mockLock);
+        given(mockLock.tryLock(org.mockito.ArgumentMatchers.anyLong(),
                 org.mockito.ArgumentMatchers.any()))
                 .willThrow(new RedisConnectionException("Redis Down Simulation"));
 
