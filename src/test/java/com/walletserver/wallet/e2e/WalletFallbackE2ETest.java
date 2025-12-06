@@ -52,9 +52,9 @@ class WalletFallbackE2ETest {
     @DisplayName("E2E Fallback: Redis 장애 시 DB Lock으로 100개 스레드 동시 출금 API 요청 테스트")
     void withdraw_fallback_concurrency_e2e_test() throws InterruptedException {
         // given
-        BigDecimal initialBalance = BigDecimal.valueOf(1000000); // 100만원
+        BigDecimal initialBalance = BigDecimal.valueOf(20000000); // 2000만원
         BigDecimal withdrawAmount = BigDecimal.valueOf(10000); // 1만원
-        int threadCount = 100;
+        int threadCount = 2000;
 
         Wallet wallet = walletRepository.save(Wallet.builder()
                 .balance(initialBalance)
